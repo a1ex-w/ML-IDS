@@ -1,0 +1,17 @@
+body { margin: 0; font-family: -apple-system, Arial, sans-serif; background: #f5f6f8; color: #222; }
+nav { background: #1f2d3d; padding: 14px 24px; display: flex; gap: 20px; align-items: center; }
+nav .brand { color: #fff; font-weight: bold; margin-right: 12px; }
+nav a { color: #cfd8e3; text-decoration: none; }
+nav a:hover { color: #fff; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+select { padding: 6px; font-size: 14px; }
+.cards { display: flex; gap: 12px; margin: 20px 0; flex-wrap: wrap; }
+.card { background: #fff; border-radius: 8px; padding: 14px 18px; flex: 1; min-width: 140px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.card .label { font-size: 13px; color: #666; }
+.card .value { font-size: 24px; font-weight: bold; margin-top: 4px; }
+.plots { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.plots img { width: 100%; background: #fff; border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+th, td { padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: left; }
+th { background: #e9edf2; }
+tr.selected { background: #eef5ff; font-weight: bold; }

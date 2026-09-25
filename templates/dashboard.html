@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Model Evaluation - ML-NIDS{% endblock %}
+{% block content %}
+<h1>Model Evaluation</h1>
+
+<!-- Model selector -->
+<form method="get" action="{{ url_for('dashboard') }}">
+  <label for="model">Model:</label>
+  <select name="model" id="model" onchange="this.form.submit()">
+    {% for model_key, metrics in all_metrics.items() %}
+      <option value="{{ model_key }}" {% if model_key == selected_model %}selected{% endif %}>{{ metrics.name }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<!-- Metric cards -->
+<div class="cards">
+  <div class="card"><div class="label">Accuracy</div><div class="value">{{ "%.2f"|format(selected_metrics.accuracy * 100) }}%</div></div>
+  <div class="card"><div class="label">Precision</div><div class="value">{{ "%.2f"|format(selected_metrics.precision * 100) }}%</div></div>
+  <div class="card"><div class="label">Recall</div><div class="value">{{ "%.2f"|format(selected_metrics.recall * 100) }}%</div></div>
+  <div class="card"><div class="label">F1-Score</div><div class="value">{{ "%.2f"|format(selected_metrics.f1 * 100) }}%</div></div>
+  <div class="card"><div class="label">ROC-AUC</div><div class="value">{{ "%.4f"|format(selected_metrics.roc_auc) }}</div></div>
+</div>
+
+<!-- Plots -->
+<div class="plots">
+  <div>
+    <h2>Confusion Matrix</h2>
+    <img src="{{ url_for('static', filename='plots/cm_' + selected_model + '.png') }}" alt="{{ selected_metrics.name }} confusion matrix">
+  </div>
+  <div>
+    <h2>Feature Importance (Random Forest)</h2>
+    <img src="{{ url_for('static', filename='plots/feature_importance.png') }}" alt="Random Forest feature importance">
+  </div>
+</div>
+
+<!-- Model comparison table -->
+<h2>Model Comparison</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th><th>False Positives</th><th>Missed Attacks</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for model_key, metrics in all_metrics.items() %}
+    <tr {% if model_key == selected_model %}class="selected"{% endif %}>
+      <td>{{ metrics.name }}</td>
+      <td>{{ "%.2f"|format(metrics.accuracy * 100) }}%</td>
+      <td>{{ "%.2f"|format(metrics.precision * 100) }}%</td>
+      <td>{{ "%.2f"|format(metrics.recall * 100) }}%</td>
+      <td>{{ "%.2f"|format(metrics.f1 * 100) }}%</td>
+      <td>{{ "%.4f"|format(metrics.roc_auc) }}</td>
+      <td>{{ "{:,}".format(metrics.fp) }}</td>
+      <td>{{ "{:,}".format(metrics.fn) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
