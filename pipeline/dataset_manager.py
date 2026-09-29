@@ -31,6 +31,18 @@ raw_df = raw_df.dropna()
 rows_dropped_na = rows_before_na - len(raw_df)
 print(f"Dropped {rows_dropped_na:,} rows with inf/NaN values")
 
+### Drop constant columns (same value in every row, no information)
+constant_columns = [col for col in raw_df.columns if col != "Label" and raw_df[col].nunique() == 1]
+raw_df = raw_df.drop(columns=constant_columns)
+print(f"Dropped {len(constant_columns)} constant columns: {constant_columns}")
+
+### Drop rows with invalid negative values
+# Init_Win_bytes uses -1 to mean "no window observed", so those columns are skipped
+negative_check_columns = [col for col in raw_df.columns if col not in ["Label", "Init_Win_bytes_forward", "Init_Win_bytes_backward"]]
+negative_mask = (raw_df[negative_check_columns] < 0).any(axis=1)
+raw_df = raw_df[~negative_mask]
+print(f"Dropped {negative_mask.sum():,} rows with invalid negative values")
+
 ### Drop exact duplicate rows
 rows_before_dupes = len(raw_df)
 raw_df = raw_df.drop_duplicates()
@@ -46,9 +58,8 @@ raw_df["Attack Type"] = raw_df["Label"]  # multiclass label, e.g. DDoS, PortScan
 raw_df["is_attack"] = (raw_df["Label"] != "BENIGN").astype(int)  # binary label: 0 = benign, 1 = attack
 raw_df = raw_df.drop(columns=["Label"])
 
-### Downcast feature columns to save memory
+### Feature columns
 feature_columns = [col for col in raw_df.columns if col not in ["Attack Type", "is_attack"]]
-raw_df[feature_columns] = raw_df[feature_columns].astype("float32")
 
 ### Print class balance
 print(f"\nFinal shape: {raw_df.shape}")

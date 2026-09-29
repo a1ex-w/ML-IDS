@@ -34,7 +34,7 @@ attack_types = sampled_df["Attack Type"]
 X_train, X_test, y_train, y_test, attack_train, attack_test = train_test_split(
     X, y, attack_types,
     test_size=0.2,
-    stratify=attack_types,
+    stratify=y,
     random_state=42,
 )
 print(f"Train: {len(X_train):,} rows | Test: {len(X_test):,} rows")
