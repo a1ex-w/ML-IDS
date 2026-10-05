@@ -85,3 +85,65 @@ with open("models/metrics.json", "w") as metrics_file:
 joblib.dump(all_scores, "models/test_scores.pkl")  # used by the threshold slider on Results Explorer
 
 print("\nSaved metrics.json, test_scores.pkl, and plots to static/plots/")
+
+### Results Explorer: thresholds to test (0.05 to 0.95)
+attack_test = test_data["attack_test"]
+thresholds = [round(t, 2) for t in np.arange(0.05, 1.0, 0.05)]
+
+### Results Explorer: metrics at each threshold (for the slider)
+threshold_metrics = {}
+for model_key, y_score in all_scores.items():
+    model_rows = []
+    for threshold in thresholds:
+        y_pred_t = (y_score >= threshold).astype(int)  # flag as attack if score is at or above threshold
+        tn, fp, fn, tp = confusion_matrix(y_test, y_pred_t).ravel()
+        model_rows.append({
+            "threshold": threshold,
+            "precision": round(precision_score(y_test, y_pred_t, zero_division=0), 4),
+            "recall": round(recall_score(y_test, y_pred_t, zero_division=0), 4),
+            "f1": round(f1_score(y_test, y_pred_t, zero_division=0), 4),
+            "fp": int(fp),
+            "fn": int(fn),
+        })
+    threshold_metrics[model_key] = model_rows
+
+### Results Explorer: correct rate per attack type at each threshold (for the filter)
+attack_metrics = {}
+for model_key, y_score in all_scores.items():
+    model_attacks = {}
+    for attack_name in np.unique(attack_test):
+        attack_mask = attack_test == attack_name
+        expected_label = 0 if attack_name == "BENIGN" else 1  # benign should be 0, every attack should be 1
+        correct_rates = []
+        for threshold in thresholds:
+            preds_for_type = (y_score[attack_mask] >= threshold).astype(int)
+            correct_rates.append(round(float((preds_for_type == expected_label).mean()), 4))
+        model_attacks[str(attack_name)] = {"count": int(attack_mask.sum()), "correct_rates": correct_rates}
+    attack_metrics[model_key] = model_attacks
+
+### Results Explorer: sample rows for the prediction table (up to 25 per attack type)
+rng = np.random.default_rng(42)
+sample_rows = []
+for attack_name in np.unique(attack_test):
+    type_indices = np.where(attack_test == attack_name)[0]
+    picked = rng.choice(type_indices, size=min(25, len(type_indices)), replace=False)
+    for row_index in picked:
+        sample_rows.append({
+            "row_id": int(row_index),
+            "attack_type": str(attack_name),
+            "true_label": int(y_test[row_index]),
+            "random_forest": round(float(all_scores["random_forest"][row_index]), 4),
+            "logistic_regression": round(float(all_scores["logistic_regression"][row_index]), 4),
+            "linear_svm": round(float(all_scores["linear_svm"][row_index]), 4),
+        })
+
+### Save Results Explorer data
+results_explorer_data = {
+    "thresholds": thresholds,
+    "threshold_metrics": threshold_metrics,
+    "attack_metrics": attack_metrics,
+    "sample_rows": sample_rows,
+}
+with open("models/results_explorer.json", "w") as results_file:
+    json.dump(results_explorer_data, results_file)
+print(f"Saved results_explorer.json ({len(thresholds)} thresholds, {len(sample_rows)} sample rows)")
