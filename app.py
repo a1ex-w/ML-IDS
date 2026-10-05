@@ -139,10 +139,10 @@ def upload():
         table_rows=table_rows,
     )
 
-### Page 3: About (in progress)
+### Page 3: About
 @app.route("/about")
 def about():
-    return render_template("placeholder.html", page_title="About")
+    return render_template("about.html", feature_columns=feature_columns)
 
 ### Run the app
 if __name__ == "__main__":

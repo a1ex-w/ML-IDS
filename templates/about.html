@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}About - ML-NIDS{% endblock %}
+{% block content %}
+<h1>About ML-NIDS</h1>
+<p class="intro">ML-NIDS is a machine learning network intrusion detection system built for my GCU MS Computer Science capstone. It classifies network traffic flows as benign or attack and lets you compare how three models perform.</p>
+
+<!-- Dataset -->
+<h2>Dataset</h2>
+<p class="intro">The models are trained on CICIDS2017 from the Canadian Institute for Cybersecurity. Each row is one network flow, described by statistics like packet counts, packet sizes, timing, and TCP flags. After cleaning, the data has 2,517,883 flows and {{ feature_columns|length }} features, and is 83.1% benign and 16.9% attack. Attack types include DoS, DDoS, PortScan, brute force (FTP and SSH), web attacks, botnet traffic, and infiltration.</p>
+
+<!-- Models -->
+<h2>Models</h2>
+<div class="cards">
+  <div class="card">
+    <div class="value about-card-title">Random Forest</div>
+    <p>Combines many decision trees and takes a vote. Handles complex patterns well and shows which features matter most.</p>
+  </div>
+  <div class="card">
+    <div class="value about-card-title">Logistic Regression</div>
+    <p>A simple linear model used as a baseline. Fast and easy to interpret, but can't capture complex patterns.</p>
+  </div>
+  <div class="card">
+    <div class="value about-card-title">Linear SVM</div>
+    <p>Finds the boundary that best separates benign and attack traffic. The linear version is used because a standard SVM is too slow for this much data.</p>
+  </div>
+</div>
+<p class="intro">All three use balanced class weights so the smaller attack class isn't ignored, and were trained on a stratified 20% sample with an 80/20 train/test split.</p>
+
+<!-- Metrics -->
+<h2>Reading the Metrics</h2>
+<table>
+  <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td>Precision</td><td>Of the traffic flagged as attacks, the share that really were attacks</td></tr>
+    <tr><td>Recall</td><td>Of all real attacks, the share the model caught</td></tr>
+    <tr><td>F1-score</td><td>A single score that balances precision and recall</td></tr>
+    <tr><td>False alarm</td><td>Benign traffic wrongly flagged as an attack</td></tr>
+    <tr><td>Missed attack</td><td>An attack the model labeled as benign</td></tr>
+    <tr><td>Threshold</td><td>How confident the model must be before it flags traffic as an attack (default 0.50)</td></tr>
+  </tbody>
+</table>
+<p class="intro">Because most traffic is benign, accuracy alone can be misleading. A model that always guessed "benign" would still be 83% accurate, so F1 and recall are better measures here.</p>
+
+<!-- Upload format -->
+<h2>Upload Format</h2>
+<p class="intro">Uploaded files must be .csv in CICIDS2017 (CICFlowMeter) format and include the {{ feature_columns|length }} columns below. Column order doesn't matter, extra columns are ignored, and a Label column is optional. If it's included, results also show accuracy. Rows with missing, infinite, or non-numeric values are skipped.</p>
+<p><a href="{{ url_for('static', filename='sample_upload.csv') }}" download>Download sample CSV</a></p>
+<details class="column-list">
+  <summary>Show all {{ feature_columns|length }} required columns</summary>
+  <ol>
+    {% for col in feature_columns %}
+      <li>{{ col }}</li>
+    {% endfor %}
+  </ol>
+</details>
+
+<!-- Limitations -->
+<h2>Limitations</h2>
+<ul class="intro">
+  <li>CICIDS2017 is lab-generated traffic, so results may not carry over to real networks.</li>
+  <li>Live traffic capture isn't supported. Files from newer CICFlowMeter versions may use different column names and need to be renamed to match.</li>
+  <li>The app runs locally and only on data you provide. Only upload traffic from networks you're authorized to monitor.</li>
+</ul>
+{% endblock %}
