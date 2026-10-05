@@ -14,13 +14,22 @@
       {% endfor %}
     </select>
   </div>
+  <div>
+    <label for="attack-select">Attack type:</label>
+    <select id="attack-select">
+      <option value="ALL">All traffic</option>
+      {% for attack_name in results_data.attack_metrics["random_forest"].keys()|sort %}
+        <option value="{{ attack_name }}">{{ attack_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
   <div class="slider-group">
     <label for="threshold-slider">Threshold: <strong id="threshold-value">0.50</strong></label>
     <input type="range" id="threshold-slider" min="0" max="{{ results_data.thresholds|length - 1 }}" step="1">
   </div>
 </div>
 
-<!-- Metric cards -->
+<!-- Metric cards (overall, for the selected model and threshold) -->
 <div class="cards">
   <div class="card"><div class="label">Precision</div><div class="value" id="precision-value">-</div></div>
   <div class="card"><div class="label">Recall</div><div class="value" id="recall-value">-</div></div>
@@ -28,34 +37,121 @@
   <div class="card"><div class="label">False Alarms</div><div class="value" id="fp-value">-</div></div>
   <div class="card"><div class="label">Missed Attacks</div><div class="value" id="fn-value">-</div></div>
 </div>
+<p id="attack-summary" class="attack-summary"></p>
+
+<!-- Prediction table -->
+<h2>Sample Predictions</h2>
+<p class="intro">Up to 25 test rows per attack type. Click a column header to sort. Predicted labels update with the threshold.</p>
+<div class="table-wrap">
+  <table id="prediction-table">
+    <thead>
+      <tr>
+        <th data-sort="row_id">Row</th>
+        <th data-sort="attack_type">Attack Type</th>
+        <th data-sort="true_label">True Label</th>
+        <th data-sort="score">Attack Score</th>
+        <th data-sort="predicted">Predicted</th>
+        <th data-sort="correct">Result</th>
+      </tr>
+    </thead>
+    <tbody id="prediction-body"></tbody>
+  </table>
+</div>
 
 <script id="results-data" type="application/json">{{ results_data|tojson }}</script>
-
 <script>
   // data precomputed by evaluator.py
   const resultsData = JSON.parse(document.getElementById("results-data").textContent);
   const modelSelect = document.getElementById("model-select");
+  const attackSelect = document.getElementById("attack-select");
   const thresholdSlider = document.getElementById("threshold-slider");
+  const predictionBody = document.getElementById("prediction-body");
+  let sortColumn = "row_id";
+  let sortAscending = true;
 
   // start the slider at 0.50 (the default threshold the models use)
   thresholdSlider.value = resultsData.thresholds.indexOf(0.5);
 
-  // look up the saved metrics for the selected model and threshold
-  function updateMetrics() {
+  // refresh cards, attack summary, and table for the current selections
+  function updatePage() {
     const selectedModel = modelSelect.value;
+    const selectedAttack = attackSelect.value;
     const thresholdIndex = Number(thresholdSlider.value);
-    const row = resultsData.threshold_metrics[selectedModel][thresholdIndex];
+    const metricsRow = resultsData.threshold_metrics[selectedModel][thresholdIndex];
+    const threshold = metricsRow.threshold;
 
-    document.getElementById("threshold-value").textContent = row.threshold.toFixed(2);
-    document.getElementById("precision-value").textContent = (row.precision * 100).toFixed(2) + "%";
-    document.getElementById("recall-value").textContent = (row.recall * 100).toFixed(2) + "%";
-    document.getElementById("f1-value").textContent = (row.f1 * 100).toFixed(2) + "%";
-    document.getElementById("fp-value").textContent = row.fp.toLocaleString();
-    document.getElementById("fn-value").textContent = row.fn.toLocaleString();
+    // overall metric cards
+    document.getElementById("threshold-value").textContent = threshold.toFixed(2);
+    document.getElementById("precision-value").textContent = (metricsRow.precision * 100).toFixed(2) + "%";
+    document.getElementById("recall-value").textContent = (metricsRow.recall * 100).toFixed(2) + "%";
+    document.getElementById("f1-value").textContent = (metricsRow.f1 * 100).toFixed(2) + "%";
+    document.getElementById("fp-value").textContent = metricsRow.fp.toLocaleString();
+    document.getElementById("fn-value").textContent = metricsRow.fn.toLocaleString();
+
+    // attack type summary (how well this type is handled at this threshold)
+    const attackSummary = document.getElementById("attack-summary");
+    if (selectedAttack === "ALL") {
+      attackSummary.textContent = "";
+    } else {
+      const attackInfo = resultsData.attack_metrics[selectedModel][selectedAttack];
+      const correctRate = (attackInfo.correct_rates[thresholdIndex] * 100).toFixed(2);
+      const rateLabel = selectedAttack === "BENIGN" ? "correctly classified as benign" : "detected";
+      attackSummary.textContent = `${selectedAttack}: ${correctRate}% ${rateLabel} (${attackInfo.count.toLocaleString()} test rows)`;
+    }
+
+    // build table rows for this model, filter, and threshold
+    const tableRows = resultsData.sample_rows
+      .filter(sample => selectedAttack === "ALL" || sample.attack_type === selectedAttack)
+      .map(sample => {
+        const score = sample[selectedModel];
+        const predicted = score >= threshold ? 1 : 0;  // same rule as evaluator.py
+        return {
+          row_id: sample.row_id,
+          attack_type: sample.attack_type,
+          true_label: sample.true_label,
+          score: score,
+          predicted: predicted,
+          correct: predicted === sample.true_label ? 1 : 0,
+        };
+      });
+
+    // sort by the selected column
+    tableRows.sort((a, b) => {
+      if (a[sortColumn] < b[sortColumn]) return sortAscending ? -1 : 1;
+      if (a[sortColumn] > b[sortColumn]) return sortAscending ? 1 : -1;
+      return 0;
+    });
+
+    // render table
+    predictionBody.innerHTML = tableRows.map(r => `
+      <tr>
+        <td>${r.row_id}</td>
+        <td>${r.attack_type}</td>
+        <td>${r.true_label === 1 ? "Attack" : "Benign"}</td>
+        <td>${r.score.toFixed(4)}</td>
+        <td>${r.predicted === 1 ? "Attack" : "Benign"}</td>
+        <td class="${r.correct ? "correct" : "wrong"}">${r.correct ? "Correct" : "Wrong"}</td>
+      </tr>`).join("");
+
+    // highlight the sorted column header
+    document.querySelectorAll("#prediction-table th").forEach(header => {
+      header.classList.toggle("sorted", header.dataset.sort === sortColumn);
+    });
   }
 
-  modelSelect.addEventListener("change", updateMetrics);
-  thresholdSlider.addEventListener("input", updateMetrics);  // "input" fires while dragging
-  updateMetrics();
+  // clicking a header sorts by it; clicking again flips the direction
+  document.querySelectorAll("#prediction-table th").forEach(header => {
+    header.addEventListener("click", () => {
+      const clickedColumn = header.dataset.sort;
+      sortAscending = clickedColumn === sortColumn ? !sortAscending : true;
+      sortColumn = clickedColumn;
+      updatePage();
+    });
+  });
+
+  modelSelect.addEventListener("change", updatePage);
+  attackSelect.addEventListener("change", updatePage);
+  thresholdSlider.addEventListener("input", updatePage);  // "input" fires while dragging
+  updatePage();
 </script>
 {% endblock %}
