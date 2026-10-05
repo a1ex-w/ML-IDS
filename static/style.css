@@ -59,6 +59,26 @@ tr.selected { background: #eef5ff; font-weight: bold; }  /* highlights the selec
 .slider-group input[type="range"] { width: 260px; }
 .attack-summary { font-weight: bold; min-height: 1.2em; margin: 0 0 20px; }
 
+/* upload form and results */
+button { 
+    padding: 7px 16px; 
+    font-size: 14px; 
+    background: #1f2d3d;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+button:hover { background: #33475e; }
+.error-box { 
+    background: #fdecea;
+    color: #8a1c1c;
+    border-left: 4px solid #c62828;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 16px 0;
+}
+
 /* prediction table: scrolls inside its box, header stays visible */
 .table-wrap {
   max-height: 520px;

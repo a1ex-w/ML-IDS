@@ -58,6 +58,25 @@
   </table>
 </div>
 
+<!-- Upload your own CSV -->
+<h2>Classify Your Own Traffic</h2>
+<p class="intro">Upload a .csv in CICIDS2017 (CICFlowMeter) format containing the {{ feature_count }} feature columns the models were trained on. A Label column is optional; if included, the results also show accuracy. Download the <a href="{{ url_for('static', filename='sample_upload.csv') }}">sample CSV</a> to see the format.</p>
+<form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data" class="controls">
+  <div>
+    <label for="upload-model">Model:</label>
+    <select name="model" id="upload-model">
+      {% for model_key, model_name in model_names.items() %}
+        <option value="{{ model_key }}">{{ model_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="upload-file">CSV file:</label>
+    <input type="file" name="file" id="upload-file" accept=".csv" required>
+  </div>
+  <button type="submit">Classify</button>
+</form>
+
 <script id="results-data" type="application/json">{{ results_data|tojson }}</script>
 <script>
   // data precomputed by evaluator.py

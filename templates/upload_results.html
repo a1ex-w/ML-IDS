@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Upload Results - ML-NIDS{% endblock %}
+{% block content %}
+<h1>Upload Results</h1>
+
+{% if error %}
+  <!-- Validation error -->
+  <div class="error-box">{{ error }}</div>
+{% else %}
+  <p class="intro">Classified <strong>{{ file_name }}</strong> with <strong>{{ model_name }}</strong> at the default 0.50 threshold.</p>
+
+  <!-- Summary cards -->
+  <div class="cards">
+    <div class="card"><div class="label">Rows Classified</div><div class="value">{{ "{:,}".format(summary.rows_classified) }}</div></div>
+    <div class="card"><div class="label">Predicted Attacks</div><div class="value">{{ "{:,}".format(summary.predicted_attacks) }}</div></div>
+    <div class="card"><div class="label">Predicted Benign</div><div class="value">{{ "{:,}".format(summary.predicted_benign) }}</div></div>
+    <div class="card"><div class="label">Rows Skipped</div><div class="value">{{ "{:,}".format(summary.rows_skipped) }}</div></div>
+    {% if summary.accuracy is not none %}
+      <div class="card"><div class="label">Accuracy vs. Label</div><div class="value">{{ summary.accuracy }}%</div></div>
+    {% endif %}
+  </div>
+
+  {% if summary.rows_skipped > 0 %}
+    <p class="intro">Rows skipped had missing, infinite, or non-numeric feature values.</p>
+  {% endif %}
+  {% if summary.rows_classified > table_rows|length %}
+    <p class="intro">Showing the first {{ table_rows|length }} of {{ "{:,}".format(summary.rows_classified) }} rows.</p>
+  {% endif %}
+
+  <!-- Prediction table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>File Row</th>
+          <th>Predicted</th>
+          <th>Attack Score</th>
+          {% if summary.accuracy is not none %}<th>Label</th><th>Result</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table_rows %}
+        <tr>
+          <td>{{ row.file_row }}</td>
+          <td>{{ row.predicted }}</td>
+          <td>{{ "%.4f"|format(row.score) }}</td>
+          {% if summary.accuracy is not none %}
+            <td>{{ row.label }}</td>
+            <td class="{{ 'correct' if row.correct else 'wrong' }}">{{ "Correct" if row.correct else "Wrong" }}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+<p><a href="{{ url_for('results') }}">&larr; Back to Results Explorer</a></p>
+{% endblock %}
