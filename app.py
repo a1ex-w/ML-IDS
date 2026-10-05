@@ -17,6 +17,8 @@ loaded_models = {
 }
 scaler = joblib.load("models/scaler.pkl")  # used for uploaded CSVs later
 feature_columns = joblib.load("models/feature_columns.pkl")
+with open("models/results_explorer.json") as results_file:
+    results_explorer_data = json.load(results_file) # threshold metrics, per-attack rates, sample rows
 print("Models and metrics loaded")
 
 ### Home redirects to the dashboard
@@ -38,10 +40,15 @@ def dashboard():
         selected_metrics=selected_metrics,
     )
 
-### Page 2: Results Explorer (in progress)
+### Page 2: Results Explorer
 @app.route("/results")
 def results():
-    return render_template("placeholder.html", page_title="Results Explorer")
+    model_names = {model_key: metrics["name"] for model_key, metrics in all_metrics.items()}
+    return render_template(
+        "results.html",
+        results_data=results_explorer_data,
+        model_names=model_names,
+    )
 
 ### Page 3: About (in progress)
 @app.route("/about")

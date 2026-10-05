@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Results Explorer - ML-NIDS{% endblock %}
+{% block content %}
+<h1>Results Explorer</h1>
+<p class="intro">Move the threshold slider to see how each model trades off catching attacks (recall) against false alarms (precision). A lower threshold flags more traffic as attacks.</p>
+
+<!-- Controls -->
+<div class="controls">
+  <div>
+    <label for="model-select">Model:</label>
+    <select id="model-select">
+      {% for model_key, model_name in model_names.items() %}
+        <option value="{{ model_key }}">{{ model_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="slider-group">
+    <label for="threshold-slider">Threshold: <strong id="threshold-value">0.50</strong></label>
+    <input type="range" id="threshold-slider" min="0" max="{{ results_data.thresholds|length - 1 }}" step="1">
+  </div>
+</div>
+
+<!-- Metric cards -->
+<div class="cards">
+  <div class="card"><div class="label">Precision</div><div class="value" id="precision-value">-</div></div>
+  <div class="card"><div class="label">Recall</div><div class="value" id="recall-value">-</div></div>
+  <div class="card"><div class="label">F1-Score</div><div class="value" id="f1-value">-</div></div>
+  <div class="card"><div class="label">False Alarms</div><div class="value" id="fp-value">-</div></div>
+  <div class="card"><div class="label">Missed Attacks</div><div class="value" id="fn-value">-</div></div>
+</div>
+
+<script id="results-data" type="application/json">{{ results_data|tojson }}</script>
+
+<script>
+  // data precomputed by evaluator.py
+  const resultsData = JSON.parse(document.getElementById("results-data").textContent);
+  const modelSelect = document.getElementById("model-select");
+  const thresholdSlider = document.getElementById("threshold-slider");
+
+  // start the slider at 0.50 (the default threshold the models use)
+  thresholdSlider.value = resultsData.thresholds.indexOf(0.5);
+
+  // look up the saved metrics for the selected model and threshold
+  function updateMetrics() {
+    const selectedModel = modelSelect.value;
+    const thresholdIndex = Number(thresholdSlider.value);
+    const row = resultsData.threshold_metrics[selectedModel][thresholdIndex];
+
+    document.getElementById("threshold-value").textContent = row.threshold.toFixed(2);
+    document.getElementById("precision-value").textContent = (row.precision * 100).toFixed(2) + "%";
+    document.getElementById("recall-value").textContent = (row.recall * 100).toFixed(2) + "%";
+    document.getElementById("f1-value").textContent = (row.f1 * 100).toFixed(2) + "%";
+    document.getElementById("fp-value").textContent = row.fp.toLocaleString();
+    document.getElementById("fn-value").textContent = row.fn.toLocaleString();
+  }
+
+  modelSelect.addEventListener("change", updateMetrics);
+  thresholdSlider.addEventListener("input", updateMetrics);  // "input" fires while dragging
+  updateMetrics();
+</script>
+{% endblock %}
